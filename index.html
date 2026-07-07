@@ -65,6 +65,45 @@ h1{
   background:var(--card);box-shadow:0 1px 4px rgba(0,0,0,.12);font-weight:600;
 }
 
+/* ===== daily quiz ===== */
+.quiz{
+  background:var(--card);border:1px solid var(--hair);border-radius:18px;
+  box-shadow:var(--shadow);padding:20px 18px;margin-bottom:22px;
+}
+.quiz-tag{font-size:11px;font-weight:700;letter-spacing:.12em;color:var(--tint);margin-bottom:6px}
+.quiz h2{font-size:19px;font-weight:700;letter-spacing:-.02em;line-height:1.4;margin-bottom:4px}
+.quiz-sub{font-size:12.5px;color:var(--muted);margin-bottom:14px}
+.quiz-chart{
+  background:color-mix(in srgb, var(--text) 4%, transparent);
+  border-radius:12px;padding:14px 10px 8px;margin-bottom:14px;text-align:center;
+}
+.quiz-chart svg{width:100%;max-width:320px;height:80px}
+.quiz-chart svg polyline{fill:none;stroke:var(--tint);stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.quiz-hint{font-size:12px;color:var(--muted);margin-top:4px}
+.quiz-opts{display:grid;gap:9px}
+.quiz-opt{
+  text-align:left;background:transparent;color:var(--text);
+  border:1px solid var(--hair);border-radius:12px;padding:13px 15px;
+  font-size:14.5px;font-weight:500;transition:border-color .15s, background .15s;
+}
+.quiz-opt:active{background:color-mix(in srgb, var(--text) 6%, transparent)}
+.quiz-opt.correct{border-color:var(--up);color:var(--up);font-weight:700}
+.quiz-opt.wrong{border-color:var(--down);color:var(--down)}
+.quiz-opt:disabled{opacity:.9}
+.quiz-result{margin-top:14px;font-size:14px;line-height:1.8;display:none}
+.quiz-result b{letter-spacing:-.01em}
+.quiz-streak{font-size:12.5px;color:var(--muted);margin-top:4px}
+.quiz-share{
+  display:block;text-align:center;margin-top:12px;
+  background:var(--text);color:var(--bg);border-radius:12px;
+  padding:13px;font-size:14px;font-weight:600;text-decoration:none;
+}
+.vs-chip{
+  text-align:center;font-size:12.5px;color:var(--muted);
+  margin:-6px 0 16px;letter-spacing:.02em;
+}
+.vs-chip b{color:var(--text)}
+
 /* ===== list ===== */
 .board{
   background:var(--card);border:1px solid var(--hair);border-radius:18px;
@@ -156,6 +195,20 @@ footer{padding:44px 18px 56px;text-align:center;font-size:11.5px;color:var(--mut
       <button data-p="r3m">3ヶ月</button>
     </div>
   </div>
+
+  <div class="quiz" id="quiz" style="display:none">
+    <div class="quiz-tag">TODAY'S QUIZ ── 毎日1問・0時更新</div>
+    <h2>この3ヶ月チャート、どの企業?</h2>
+    <div class="quiz-sub" id="quiz-date"></div>
+    <div class="quiz-chart">
+      <div id="quiz-svg"></div>
+      <div class="quiz-hint" id="quiz-hint"></div>
+    </div>
+    <div class="quiz-opts" id="quiz-opts"></div>
+    <div class="quiz-result" id="quiz-result"></div>
+  </div>
+
+  <div class="vs-chip" id="vs-chip"></div>
 
   <div class="board" id="board"><div class="empty">読み込み中…</div></div>
 
@@ -251,11 +304,77 @@ document.querySelectorAll("#seg-period button").forEach(b=>b.onclick=()=>{
   b.classList.add("on");PERIOD=b.dataset.p;render();
 });
 
+/* ===== 日米モメンタム対決 ===== */
+function renderVS(){
+  if(!DATA)return;
+  const jp=DATA.stocks.filter(s=>s.m==="JP"), us=DATA.stocks.filter(s=>s.m==="US");
+  if(!jp.length||!us.length)return;
+  const avg=a=>a.reduce((x,s)=>x+s.r1w,0)/a.length;
+  const j=avg(jp), u=avg(us);
+  const lead=Math.abs(j-u)<0.05?"引き分け":(j>u?"🇯🇵 日本リード":"🇺🇸 米国リード");
+  $("vs-chip").innerHTML=`今週の日米対決: 🇯🇵 ${pct(j)} vs 🇺🇸 ${pct(u)} ── <b>${lead}</b>`;
+}
+
+/* ===== 今日の株クイズ(データから日替わり自動生成) ===== */
+function mulberry(seed){return function(){seed|=0;seed=seed+0x6D2B79F5|0;let t=Math.imul(seed^seed>>>15,1|seed);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+
+function store(k,v){try{if(v===undefined)return JSON.parse(localStorage.getItem(k));localStorage.setItem(k,JSON.stringify(v))}catch(e){return null}}
+
+function renderQuiz(){
+  if(!DATA||DATA.stocks.length<4)return;
+  const now=new Date();
+  const dayKey=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,"0")}-${String(now.getDate()).padStart(2,"0")}`;
+  const rnd=mulberry(now.getFullYear()*10000+(now.getMonth()+1)*100+now.getDate());
+  const pool=[...DATA.stocks];
+  const answer=pool.splice(Math.floor(rnd()*pool.length),1)[0];
+  const decoys=[];
+  const same=pool.filter(s=>s.m===answer.m), other=pool.filter(s=>s.m!==answer.m);
+  while(decoys.length<3){
+    const src=same.length?same:other;
+    decoys.push(src.splice(Math.floor(rnd()*src.length),1)[0]);
+  }
+  const opts=[answer,...decoys].sort(()=>rnd()-0.5);
+
+  $("quiz").style.display="block";
+  $("quiz-date").textContent=`${now.getMonth()+1}/${now.getDate()} の問題 ── 明日はまた新しい1問`;
+  const pts=answer.spark,w=320,h=80,min=Math.min(...pts),max=Math.max(...pts),rng=(max-min)||1;
+  const xy=pts.map((p,i)=>`${(i/(pts.length-1)*w).toFixed(1)},${(h-4-((p-min)/rng*(h-8))).toFixed(1)}`).join(" ");
+  $("quiz-svg").innerHTML=`<svg viewBox="0 0 ${w} ${h}"><polyline points="${xy}"/></svg>`;
+  $("quiz-hint").textContent=`ヒント: ${answer.m==="JP"?"🇯🇵日本":"🇺🇸米国"}の企業/3ヶ月 ${pct(answer.r3m)}`;
+
+  const played=store("quiz-"+dayKey);
+  const s=store("quiz-stats")||{streak:0,best:0,last:""};
+
+  function finish(correct,btns){
+    btns.forEach(b=>{b.disabled=true;
+      if(b.dataset.t===answer.t)b.classList.add("correct");
+      else if(b.dataset.picked)b.classList.add("wrong");});
+    const st=store("quiz-stats")||{streak:0,best:0,last:""};
+    if(st.last!==dayKey){
+      st.streak=correct?st.streak+1:0;
+      st.best=Math.max(st.best,st.streak);st.last=dayKey;
+      store("quiz-stats",st);store("quiz-"+dayKey,{correct});
+    }
+    const shareTxt=`今日の株クイズ ${correct?"正解🎯":"不正解😇"}(連続${st.streak}日)\nこの3ヶ月チャートは【${answer.n}】でした\n#今日の株クイズ\n`;
+    $("quiz-result").style.display="block";
+    $("quiz-result").innerHTML=
+      `${correct?"🎯 <b>正解!</b>":"😇 <b>残念!</b>"} 答えは <b>${answer.n}</b>(${answer.t.replace(".T","")}・${fmtP(answer.p,answer.c)})<br>`+
+      `1週 ${pct(answer.r1w)}/1ヶ月 ${pct(answer.r1m)}/3ヶ月 ${pct(answer.r3m)}`+
+      `<div class="quiz-streak">連続正解: ${st.streak}日(自己ベスト ${st.best}日)</div>`+
+      `<a class="quiz-share" target="_blank" rel="noopener" href="https://twitter.com/intent/tweet?text=${encodeURIComponent(shareTxt)}&url=${encodeURIComponent(location.href)}">結果を X でシェア</a>`;
+  }
+
+  $("quiz-opts").innerHTML=opts.map(o=>`<button class="quiz-opt" data-t="${o.t}">${o.n}(${o.m==="JP"?"🇯🇵":"🇺🇸"})</button>`).join("");
+  const btns=[...document.querySelectorAll(".quiz-opt")];
+  if(played){finish(played.correct,btns);}
+  else btns.forEach(b=>b.onclick=()=>{b.dataset.picked="1";finish(b.dataset.t===answer.t,btns)});
+}
+
 fetch("data.json",{cache:"no-store"})
   .then(r=>{if(!r.ok)throw 0;return r.json()})
   .then(j=>{DATA=j})
   .catch(()=>{DATA=DEMO})
-  .finally(()=>{setStamp();render()});
+  .finally(()=>{setStamp();render();renderVS();renderQuiz()});
 </script>
 </body>
 </html>
