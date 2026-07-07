@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GROWTH INDEX｜伸びてる企業、データで一覧。</title>
+<meta name="description" content="日米の株式データを毎日自動集計し、1週間・1ヶ月・3ヶ月の成長率でランキング表示。数式は全公開。投資助言ではありません。">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#fbfbfd; --card:#ffffff; --text:#1d1d1f; --muted:#6e6e73;
+  --hair:#e8e8ed; --up:#1e9e46; --down:#e0301f; --tint:#0071e3;
+  --shadow:0 2px 14px rgba(0,0,0,.05);
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    --bg:#000; --card:#1c1c1e; --text:#f5f5f7; --muted:#98989d;
+    --hair:#33333a; --up:#30d158; --down:#ff453a; --tint:#2997ff;
+    --shadow:0 2px 14px rgba(0,0,0,.4);
+  }
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{
+  background:var(--bg); color:var(--text);
+  font-family:-apple-system,BlinkMacSystemFont,'Inter','Hiragino Sans','Yu Gothic UI',sans-serif;
+  line-height:1.6; font-size:15px;
+  -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:680px;margin:0 auto;padding:0 18px}
+button{font-family:inherit;cursor:pointer;font-size:inherit}
+
+/* ===== frosted header ===== */
+header{
+  position:sticky;top:0;z-index:10;
+  background:color-mix(in srgb, var(--bg) 72%, transparent);
+  -webkit-backdrop-filter:saturate(180%) blur(20px);
+  backdrop-filter:saturate(180%) blur(20px);
+  border-bottom:1px solid var(--hair);
+}
+.head-in{max-width:680px;margin:0 auto;padding:13px 18px;display:flex;justify-content:space-between;align-items:baseline}
+.brand{font-weight:700;letter-spacing:-.01em;font-size:15px}
+.stamp{font-size:12px;color:var(--muted)}
+
+/* ===== hero ===== */
+.hero{padding:52px 0 34px;text-align:center}
+h1{
+  font-size:clamp(32px,8.4vw,46px);font-weight:700;letter-spacing:-.03em;line-height:1.18;
+}
+.hero p{color:var(--muted);margin-top:12px;font-size:16px;letter-spacing:-.01em}
+
+/* ===== segmented controls ===== */
+.seg-row{display:flex;flex-direction:column;gap:10px;align-items:center;margin-bottom:22px}
+.seg{
+  display:inline-flex;background:color-mix(in srgb, var(--text) 6%, transparent);
+  border-radius:11px;padding:3px;gap:2px;
+}
+.seg button{
+  border:none;background:transparent;color:var(--text);
+  padding:7px 16px;border-radius:8.5px;font-size:13.5px;font-weight:500;
+  transition:background .18s ease, box-shadow .18s ease;
+}
+.seg button.on{
+  background:var(--card);box-shadow:0 1px 4px rgba(0,0,0,.12);font-weight:600;
+}
+
+/* ===== list ===== */
+.board{
+  background:var(--card);border:1px solid var(--hair);border-radius:18px;
+  box-shadow:var(--shadow);overflow:hidden;
+}
+.row{
+  display:grid;grid-template-columns:26px 1fr 74px 86px;gap:12px;align-items:center;
+  padding:15px 16px;border-bottom:1px solid var(--hair);
+  animation:rise .4s ease both;
+}
+.row:last-child{border-bottom:none}
+@keyframes rise{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.rk{color:var(--muted);font-size:13px;font-weight:600;text-align:center;font-variant-numeric:tabular-nums}
+.rk.top{color:var(--text)}
+.nm{min-width:0}
+.nm b{font-size:15px;font-weight:600;letter-spacing:-.01em;display:flex;align-items:center;gap:6px}
+.nm b span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.flag{font-size:12px}
+.nm small{display:block;color:var(--muted);font-size:11.5px;margin-top:1px;font-variant-numeric:tabular-nums;letter-spacing:0}
+.spark{width:74px;height:26px;display:block}
+.spark polyline{fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.val{text-align:right}
+.val b{font-size:16px;font-weight:600;letter-spacing:-.02em;font-variant-numeric:tabular-nums;display:block}
+.val small{font-size:11px;color:var(--muted)}
+.u{color:var(--up)} .d{color:var(--down)}
+.price{font-size:11.5px;color:var(--muted);font-variant-numeric:tabular-nums}
+.empty{padding:40px;text-align:center;color:var(--muted)}
+
+/* ===== method / legal ===== */
+.method{margin:20px 0 0;font-size:12.5px;color:var(--muted);line-height:1.9;padding:0 6px}
+.method b{color:var(--text);font-weight:600}
+.method code{
+  font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11.5px;
+  background:color-mix(in srgb, var(--text) 6%, transparent);padding:2px 7px;border-radius:6px;
+}
+.legal{
+  margin:16px 0 0;font-size:11.5px;color:var(--muted);line-height:1.9;
+  border-top:1px solid var(--hair);padding:16px 6px 0;
+}
+
+/* ===== affiliate ===== */
+.aff{margin:48px 0 0;text-align:center}
+.aff h2{font-size:clamp(24px,6vw,32px);font-weight:700;letter-spacing:-.03em;line-height:1.25}
+.aff>p{color:var(--muted);margin:10px 0 22px;font-size:15px}
+.aff-grid{display:grid;gap:12px;text-align:left}
+.aff-card{
+  display:flex;justify-content:space-between;align-items:center;gap:14px;
+  background:var(--card);border:1px solid var(--hair);border-radius:16px;
+  padding:18px;text-decoration:none;color:var(--text);box-shadow:var(--shadow);
+  transition:transform .18s ease;
+}
+.aff-card:hover{transform:translateY(-2px)}
+.aff-card b{font-size:15px;letter-spacing:-.01em}
+.aff-card small{display:block;color:var(--muted);font-size:12.5px;margin-top:3px;line-height:1.6}
+.aff-card .go{
+  flex-shrink:0;color:#fff;background:var(--tint);border-radius:999px;
+  font-size:12.5px;font-weight:600;padding:8px 16px;white-space:nowrap;
+}
+footer{padding:44px 18px 56px;text-align:center;font-size:11.5px;color:var(--muted);line-height:2}
+@media (prefers-reduced-motion:reduce){.row{animation:none}.aff-card{transition:none}}
+@media (max-width:400px){.row{grid-template-columns:22px 1fr 60px 78px;gap:8px}.spark{width:60px}}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="head-in">
+    <div class="brand">GROWTH INDEX</div>
+    <div class="stamp" id="stamp">—</div>
+  </div>
+</header>
+
+<main class="wrap">
+  <section class="hero">
+    <h1>伸びてる企業、<br>データで一覧。</h1>
+    <p>日米の株価を毎日自動集計。成長率で、ただ並べる。</p>
+  </section>
+
+  <div class="seg-row">
+    <div class="seg" id="seg-market">
+      <button class="on" data-m="ALL">すべて</button>
+      <button data-m="JP">🇯🇵 日本</button>
+      <button data-m="US">🇺🇸 米国</button>
+    </div>
+    <div class="seg" id="seg-period">
+      <button class="on" data-p="score">総合</button>
+      <button data-p="r1w">1週間</button>
+      <button data-p="r1m">1ヶ月</button>
+      <button data-p="r3m">3ヶ月</button>
+    </div>
+  </div>
+
+  <div class="board" id="board"><div class="empty">読み込み中…</div></div>
+
+  <div class="method">
+    <b>集計方法（全公開）</b><br>
+    直近終値から各期間の騰落率を機械計算し、大きい順に並べています。「総合」は
+    <code>1週×0.2 ＋ 1ヶ月×0.5 ＋ 3ヶ月×0.3</code>
+    の加重平均。過去の値動きの集計であり、将来の株価を予測するものではありません。チャートは直近3ヶ月の推移。
+  </div>
+
+  <div class="legal">
+    本サイトは公開市場データを機械的に集計・表示する情報サイトであり、金融商品取引法上の投資助言・勧誘を行うものではありません。表示順位は売買の推奨や優先度を意味しません。データは遅延・欠損する場合があります。投資判断はご自身の責任で行ってください。
+  </div>
+
+  <section class="aff">
+    <h2>見るだけで、終わらせない。</h2>
+    <p>株式の売買には証券口座が必要です。開設はどれも無料。</p>
+    <div class="aff-grid">
+      <!-- AFFILIATE: 証券口座開設(A8/もしも/アクセストレードで案件検索して差し替え) -->
+      <a class="aff-card" href="#AFFILIATE-SBI証券" target="_blank" rel="noopener nofollow">
+        <span><b>SBI証券</b><small>国内最大手。日本株・米国株・NISAをこれひとつで。</small></span>
+        <span class="go">無料で開設</span>
+      </a>
+      <a class="aff-card" href="#AFFILIATE-moomoo証券" target="_blank" rel="noopener nofollow">
+        <span><b>moomoo証券</b><small>米国株に強く、アプリの分析機能が充実。</small></span>
+        <span class="go">無料で開設</span>
+      </a>
+      <a class="aff-card" href="#AFFILIATE-楽天証券" target="_blank" rel="noopener nofollow">
+        <span><b>楽天証券</b><small>楽天ポイントで投資デビューできる手軽さ。</small></span>
+        <span class="go">無料で開設</span>
+      </a>
+    </div>
+  </section>
+</main>
+
+<footer>
+  GROWTH INDEX — 日米成長企業ランキング<br>
+  データは自動集計・毎日更新（休場日を除く）。© 2026
+</footer>
+
+<script>
+/* データ: 同ディレクトリの data.json を読む。無ければ内蔵デモを表示。
+   data.json は build_data.py + GitHub Actions が毎日生成する。 */
+const DEMO = {"updated": "2026-07-07T06:10:00+09:00", "demo": true, "stocks": [{"t": "6857.T", "n": "アドバンテスト", "m": "JP", "p": 11840, "c": "¥", "r1w": 4.8, "r1m": 16.2, "r3m": 42.5, "spark": [70.2, 70.6, 71.0, 73.6, 72.8, 75.3, 75.7, 75.7, 78.1, 77.6, 79.9, 79.7, 80.8, 82.8, 85.1, 83.9, 86.1, 86.7, 89.6, 92.2, 92.5, 93.5, 95.4, 100.0]}, {"t": "NVDA", "n": "NVIDIA", "m": "US", "p": 188.44, "c": "$", "r1w": 3.1, "r1m": 11.4, "r3m": 38.2, "spark": [72.4, 75.0, 73.1, 76.8, 76.0, 76.7, 77.7, 79.4, 82.1, 81.1, 83.5, 84.8, 85.0, 86.7, 86.2, 87.3, 89.8, 90.0, 92.8, 93.1, 94.0, 96.1, 97.0, 100.0]}, {"t": "PLTR", "n": "Palantir", "m": "US", "p": 162.4, "c": "$", "r1w": 6.2, "r1m": 14.8, "r3m": 31.0, "spark": [76.3, 76.9, 77.0, 79.3, 79.7, 78.9, 80.6, 81.1, 82.9, 83.1, 82.4, 85.3, 83.2, 84.8, 86.6, 85.3, 87.1, 88.2, 88.0, 91.2, 92.7, 93.2, 94.2, 100.0]}, {"t": "8035.T", "n": "東京エレクトロン", "m": "JP", "p": 29450, "c": "¥", "r1w": 2.9, "r1m": 9.6, "r3m": 27.4, "spark": [78.5, 80.5, 79.5, 81.5, 82.0, 82.7, 83.1, 85.2, 86.3, 85.6, 87.0, 85.9, 88.7, 89.3, 91.2, 91.5, 91.2, 91.5, 92.9, 94.8, 93.7, 96.1, 97.2, 100.0]}, {"t": "AVGO", "n": "Broadcom", "m": "US", "p": 301.12, "c": "$", "r1w": 2.2, "r1m": 8.9, "r3m": 24.6, "spark": [80.3, 79.9, 80.5, 81.0, 84.0, 82.7, 83.8, 85.0, 87.2, 85.4, 87.3, 88.4, 90.2, 90.7, 91.5, 90.4, 91.8, 92.6, 93.4, 96.1, 97.3, 95.7, 97.8, 100.0]}, {"t": "6501.T", "n": "日立製作所", "m": "JP", "p": 4620, "c": "¥", "r1w": 1.8, "r1m": 7.4, "r3m": 21.9, "spark": [82.0, 81.7, 82.6, 83.3, 84.8, 85.8, 85.4, 85.3, 87.3, 87.8, 89.2, 91.1, 91.0, 91.1, 92.1, 93.0, 93.1, 92.5, 96.1, 96.6, 97.7, 98.3, 98.2, 100.0]}, {"t": "7974.T", "n": "任天堂", "m": "JP", "p": 13980, "c": "¥", "r1w": 3.4, "r1m": 6.8, "r3m": 19.3, "spark": [83.8, 84.1, 84.7, 84.4, 86.7, 85.5, 86.1, 87.2, 87.6, 88.8, 88.5, 89.0, 90.1, 90.5, 92.0, 91.5, 93.6, 95.3, 95.0, 94.0, 94.9, 95.7, 96.7, 100.0]}, {"t": "META", "n": "Meta Platforms", "m": "US", "p": 742.8, "c": "$", "r1w": 1.5, "r1m": 5.9, "r3m": 17.2, "spark": [85.3, 85.5, 85.3, 88.1, 89.2, 88.1, 88.7, 88.0, 88.6, 89.9, 90.3, 92.6, 91.1, 91.2, 94.7, 94.0, 94.4, 94.0, 95.9, 95.0, 97.2, 99.4, 98.5, 100.0]}, {"t": "LLY", "n": "Eli Lilly", "m": "US", "p": 884.03, "c": "$", "r1w": 2.6, "r1m": 6.1, "r3m": 14.8, "spark": [87.1, 88.7, 88.6, 87.7, 88.5, 88.3, 90.7, 90.3, 91.6, 90.6, 90.7, 93.0, 94.0, 94.0, 94.3, 94.8, 94.3, 95.6, 94.4, 95.9, 95.9, 95.4, 97.5, 100.0]}, {"t": "6758.T", "n": "ソニーグループ", "m": "JP", "p": 4188, "c": "¥", "r1w": 0.9, "r1m": 4.2, "r3m": 13.5, "spark": [88.1, 87.1, 88.4, 88.8, 90.7, 92.0, 90.9, 92.9, 93.6, 94.0, 92.6, 92.6, 93.1, 93.5, 94.0, 95.9, 96.0, 97.8, 98.1, 97.5, 98.6, 99.5, 99.1, 100.0]}, {"t": "MSFT", "n": "Microsoft", "m": "US", "p": 512.66, "c": "$", "r1w": 1.1, "r1m": 3.8, "r3m": 11.9, "spark": [89.4, 88.5, 90.8, 92.0, 92.0, 92.3, 91.9, 91.4, 93.8, 92.8, 94.7, 95.7, 94.3, 94.7, 96.9, 96.6, 96.3, 95.7, 96.0, 96.5, 99.3, 99.5, 98.9, 100.0]}, {"t": "9984.T", "n": "ソフトバンクG", "m": "JP", "p": 12310, "c": "¥", "r1w": -1.2, "r1m": 5.5, "r3m": 10.4, "spark": [90.6, 89.7, 92.2, 92.9, 92.1, 91.4, 92.3, 91.2, 91.1, 94.5, 93.7, 93.6, 95.1, 93.8, 95.5, 95.6, 94.8, 94.9, 96.1, 97.3, 98.2, 100.4, 101.2, 100.0]}, {"t": "6098.T", "n": "リクルートHD", "m": "JP", "p": 9120, "c": "¥", "r1w": 0.6, "r1m": 2.9, "r3m": 8.7, "spark": [92.0, 91.6, 92.4, 91.8, 94.6, 93.1, 93.8, 94.5, 95.9, 94.7, 96.6, 95.6, 96.0, 96.3, 95.0, 96.7, 97.2, 96.5, 96.3, 99.2, 97.6, 98.9, 99.4, 100.0]}, {"t": "AAPL", "n": "Apple", "m": "US", "p": 228.91, "c": "$", "r1w": 0.4, "r1m": 2.1, "r3m": 6.3, "spark": [94.1, 95.0, 94.7, 94.2, 95.1, 95.5, 96.4, 94.5, 96.2, 95.4, 95.8, 97.6, 97.0, 97.4, 98.3, 99.0, 97.9, 98.0, 98.9, 98.8, 99.1, 99.9, 99.6, 100.0]}, {"t": "7203.T", "n": "トヨタ自動車", "m": "JP", "p": 3120, "c": "¥", "r1w": -0.8, "r1m": 1.4, "r3m": 4.2, "spark": [96.0, 96.0, 96.4, 96.4, 98.0, 97.4, 98.2, 98.5, 96.5, 97.7, 99.0, 98.9, 96.8, 96.9, 98.1, 97.1, 98.6, 98.2, 98.0, 100.3, 101.0, 101.7, 100.8, 100.0]}, {"t": "TSLA", "n": "Tesla", "m": "US", "p": 241.3, "c": "$", "r1w": -2.4, "r1m": -3.8, "r3m": 2.1, "spark": [97.9, 97.2, 99.4, 99.6, 98.3, 101.0, 101.7, 99.7, 102.4, 101.0, 101.7, 103.6, 103.5, 101.7, 103.0, 103.6, 104.0, 103.2, 102.5, 102.6, 103.7, 101.2, 102.5, 100.0]}]};
+
+const $=id=>document.getElementById(id);
+let DATA=null, MARKET="ALL", PERIOD="score";
+const LBL={score:"総合スコア", r1w:"1週間", r1m:"1ヶ月", r3m:"3ヶ月"};
+
+const score=s=> +(s.r1w*0.2 + s.r1m*0.5 + s.r3m*0.3).toFixed(1);
+
+function sparkline(pts, upTrend){
+  const w=74,h=26,min=Math.min(...pts),max=Math.max(...pts),rng=(max-min)||1;
+  const xy=pts.map((p,i)=>`${(i/(pts.length-1)*w).toFixed(1)},${(h-2-((p-min)/rng*(h-4))).toFixed(1)}`).join(" ");
+  const col=upTrend?"var(--up)":"var(--down)";
+  return `<svg class="spark" viewBox="0 0 ${w} ${h}" aria-hidden="true"><polyline points="${xy}" style="stroke:${col}"/></svg>`;
+}
+const pct=v=>`${v>=0?"+":""}${v.toFixed(1)}%`;
+const cls=v=>v>=0?"u":"d";
+const fmtP=(p,c)=> c==="¥" ? "¥"+p.toLocaleString("ja-JP") : "$"+p.toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2});
+
+function render(){
+  if(!DATA){$("board").innerHTML='<div class="empty">データを取得できませんでした。</div>';return}
+  let rows=DATA.stocks.map(s=>({...s,score:score(s)}));
+  if(MARKET!=="ALL") rows=rows.filter(s=>s.m===MARKET);
+  rows.sort((a,b)=>b[PERIOD]-a[PERIOD]);
+  $("board").innerHTML = rows.length ? rows.map((s,i)=>{
+    const v=s[PERIOD];
+    return `<div class="row" style="animation-delay:${Math.min(i*28,400)}ms">
+      <div class="rk ${i<3?"top":""}">${i+1}</div>
+      <div class="nm">
+        <b><span>${s.n}</span><span class="flag">${s.m==="JP"?"🇯🇵":"🇺🇸"}</span></b>
+        <small>${s.t.replace(".T","")}・${fmtP(s.p,s.c)}　1週 ${pct(s.r1w)}／1ヶ月 ${pct(s.r1m)}／3ヶ月 ${pct(s.r3m)}</small>
+      </div>
+      ${sparkline(s.spark, s.r3m>=0)}
+      <div class="val"><b class="${cls(v)}">${pct(v)}</b><small>${LBL[PERIOD]}</small></div>
+    </div>`;
+  }).join("") : '<div class="empty">該当する銘柄がありません。</div>';
+}
+
+function setStamp(){
+  if(!DATA)return;
+  const d=new Date(DATA.updated);
+  $("stamp").textContent=(DATA.demo?"デモデータ｜":"")+`更新 ${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`;
+}
+
+document.querySelectorAll("#seg-market button").forEach(b=>b.onclick=()=>{
+  document.querySelectorAll("#seg-market button").forEach(x=>x.classList.remove("on"));
+  b.classList.add("on");MARKET=b.dataset.m;render();
+});
+document.querySelectorAll("#seg-period button").forEach(b=>b.onclick=()=>{
+  document.querySelectorAll("#seg-period button").forEach(x=>x.classList.remove("on"));
+  b.classList.add("on");PERIOD=b.dataset.p;render();
+});
+
+fetch("data.json",{cache:"no-store"})
+  .then(r=>{if(!r.ok)throw 0;return r.json()})
+  .then(j=>{DATA=j})
+  .catch(()=>{DATA=DEMO})
+  .finally(()=>{setStamp();render()});
+</script>
+</body>
+</html>

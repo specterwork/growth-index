@@ -1,0 +1,40 @@
+# GROWTH INDEX 自動更新
+# 置き場所: リポジトリの .github/workflows/update.yml
+# 日本時間 朝7時（米国市場クローズ後・東証寄り前）に毎日実行。
+# Settings > Pages で「Deploy from branch: main」を有効にしておくこと。
+name: update-data
+
+on:
+  schedule:
+    - cron: "0 22 * * *"   # UTC 22:00 = JST 翌朝 7:00
+  workflow_dispatch:        # 手動実行ボタンも有効化
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install deps
+        run: pip install yfinance
+
+      - name: Build data.json
+        run: python build_data.py
+
+      - name: Build daily posts
+        run: python build_posts.py
+
+      - name: Commit & push if changed
+        run: |
+          git config user.name "growth-index-bot"
+          git config user.email "bot@users.noreply.github.com"
+          git add data.json posts/
+          git diff --cached --quiet || git commit -m "data: auto update $(date -u +%F)"
+          git push
