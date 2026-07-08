@@ -52,6 +52,24 @@ def pct_change(series, days_ago):
         return None
     return round((now / then - 1) * 100, 1)
 
+EN_NAMES = {  # 日本株の英語表示名(EN切替用)
+    "7203.T":"Toyota Motor","6758.T":"Sony Group","8035.T":"Tokyo Electron",
+    "6861.T":"Keyence","9984.T":"SoftBank Group","6501.T":"Hitachi",
+    "7974.T":"Nintendo","6098.T":"Recruit Holdings","8306.T":"Mitsubishi UFJ",
+    "4063.T":"Shin-Etsu Chemical","6857.T":"Advantest","9983.T":"Fast Retailing",
+    "4568.T":"Daiichi Sankyo","6902.T":"Denso","6954.T":"Fanuc","7741.T":"HOYA",
+    "4519.T":"Chugai Pharma","8058.T":"Mitsubishi Corp","9432.T":"NTT","6367.T":"Daikin",
+}
+
+def candles(df_t, rule=None, n=63):
+    """日足(rule=None)または週足(rule='W')のOHLCを末尾n本、[o,h,l,c]の配列で返す"""
+    o = df_t[["Open","High","Low","Close"]].dropna()
+    if rule:
+        o = o.resample(rule).agg({"Open":"first","High":"max","Low":"min","Close":"last"}).dropna()
+    o = o.iloc[-n:]
+    return [[round(float(r.Open),2),round(float(r.High),2),round(float(r.Low),2),round(float(r.Close),2)]
+            for r in o.itertuples()]
+
 def downsample(series, n):
     """終値列を n 点に間引き、先頭を100として正規化"""
     vals = [float(v) for v in series]
@@ -65,7 +83,7 @@ def downsample(series, n):
 def main():
     tickers = [u[0] for u in UNIVERSE]
     # 3ヶ月+バッファぶんの日足を一括取得（auto_adjust=True: 分割・配当調整済み）
-    df = yf.download(tickers, period="4mo", interval="1d",
+    df = yf.download(tickers, period="13mo", interval="1d",
                      auto_adjust=True, progress=False, group_by="ticker", threads=True)
     stocks = []
     for tkr, name, mkt, cur in UNIVERSE:
@@ -78,13 +96,18 @@ def main():
             r3m = pct_change(close, min(63, len(close) - 1))  # 63営業日 ≒ 3ヶ月
             if None in (r1w, r1m, r3m):
                 continue
-            stocks.append({
+            entry = {
                 "t": tkr, "n": name, "m": mkt, "c": cur,
                 "p": round(float(close.iloc[-1]), 2),
                 "r1w": r1w, "r1m": r1m, "r3m": r3m,
                 "spark": downsample(close.iloc[-63:], SPARK_POINTS),
+                "cd": candles(df[tkr], None, 63),   # 日足3ヶ月
+                "cw": candles(df[tkr], "W", 52),    # 週足1年
                 "_score": r1w * 0.2 + r1m * 0.5 + r3m * 0.3,
-            })
+            }
+            if tkr in EN_NAMES:
+                entry["ne"] = EN_NAMES[tkr]
+            stocks.append(entry)
         except Exception as e:
             print(f"skip {tkr}: {e}")
     stocks.sort(key=lambda s: s["_score"], reverse=True)
