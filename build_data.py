@@ -113,7 +113,17 @@ def main():
     stocks.sort(key=lambda s: s["_score"], reverse=True)
     for s in stocks:
         s.pop("_score")
+    # 為替(米国株の円換算表示用)
+    fx = None
+    try:
+        fxs = yf.download("USDJPY=X", period="5d", interval="1d",
+                          auto_adjust=True, progress=False)["Close"].dropna()
+        fx = round(float(fxs.iloc[-1]), 2)
+    except Exception as e:
+        print("fx skip:", e)
+
     out = {
+        "fx": fx,
         "updated": datetime.datetime.now(
             datetime.timezone(datetime.timedelta(hours=9))).isoformat(timespec="minutes"),
         "demo": False,
