@@ -80,6 +80,39 @@ def downsample(series, n):
     base = pts[0] or 1
     return [round(p / base * 100, 1) for p in pts]
 
+def backtest_stats(df, universe):
+    """過去データ全体で「状態→1ヶ月後リターン」の統計を集計(全銘柄プール)
+       状態 = トレンド(UP/DN/MX) × 過熱(H: 1週+5%超 / N)"""
+    agg = {}
+    for tkr, _, _, _ in universe:
+        try:
+            c = df[tkr]["Close"].dropna()
+            if len(c) < 120:
+                continue
+            r1w = c.pct_change(5) * 100
+            r1m = c.pct_change(21) * 100
+            r3m = c.pct_change(63) * 100
+            fwd = (c.shift(-21) / c - 1) * 100
+            for i in range(63, len(c) - 21):
+                w, m, q, f = r1w.iloc[i], r1m.iloc[i], r3m.iloc[i], fwd.iloc[i]
+                if any(x != x for x in (w, m, q, f)):  # NaN
+                    continue
+                trend = "UP" if (m >= 0 and q >= 0) else "DN" if (m < 0 and q < 0) else "MX"
+                key = trend + ("H" if w > 5 else "N")
+                a = agg.setdefault(key, [0, 0, []])
+                a[0] += 1
+                a[1] += 1 if f > 0 else 0
+                a[2].append(f)
+        except Exception:
+            continue
+    stats = {}
+    for k, (n, wins, fs) in agg.items():
+        if n < 30:   # サンプル不足の状態は出さない
+            continue
+        fs.sort()
+        stats[k] = {"n": n, "win": round(wins / n * 100, 1), "med": round(fs[len(fs)//2], 1)}
+    return stats
+
 def main():
     tickers = [u[0] for u in UNIVERSE]
     # 3ヶ月+バッファぶんの日足を一括取得（auto_adjust=True: 分割・配当調整済み）
@@ -123,6 +156,7 @@ def main():
         print("fx skip:", e)
 
     out = {
+        "stats": backtest_stats(df, UNIVERSE),
         "fx": fx,
         "updated": datetime.datetime.now(
             datetime.timezone(datetime.timedelta(hours=9))).isoformat(timespec="minutes"),
