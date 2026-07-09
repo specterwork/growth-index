@@ -105,6 +105,35 @@ h1{
 .diag-card .val{font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}
 .diag-note{font-size:11px;color:var(--muted);margin-top:10px;line-height:1.7}
 .tapable{cursor:pointer}
+.row{transition:transform .15s ease, background .15s ease}
+.row:active{transform:scale(.985);background:color-mix(in srgb, var(--text) 4%, transparent)}
+.spark polyline,.quiz-chart polyline{stroke-dasharray:1;stroke-dashoffset:1;animation:draw .9s ease .1s forwards}
+@keyframes draw{to{stroke-dashoffset:0}}
+.modal{animation:slideUp .4s cubic-bezier(.2,.9,.25,1)}
+@keyframes slideUp{from{transform:translateY(60px);opacity:0}to{transform:none;opacity:1}}
+.modal-bg{animation:fadeIn .3s ease}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+.m-chart svg{animation:fadeUp .5s ease both}
+.m-rets .m-ret,.diag-grid .diag-card{animation:fadeUp .45s ease both}
+.m-rets .m-ret:nth-child(2){animation-delay:.06s}.m-rets .m-ret:nth-child(3){animation-delay:.12s}
+.diag-grid .diag-card:nth-child(2){animation-delay:.05s}
+.diag-grid .diag-card:nth-child(3){animation-delay:.1s}
+.diag-grid .diag-card:nth-child(4){animation-delay:.15s}
+.hero{position:relative}
+.hero::before{
+  content:'';position:absolute;inset:-40px -20px;pointer-events:none;z-index:-1;
+  background:radial-gradient(420px 220px at 50% 30%, color-mix(in srgb, var(--tint) 9%, transparent), transparent 70%);
+  animation:breathe 7s ease-in-out infinite;
+}
+@keyframes breathe{0%,100%{opacity:.6;transform:scale(1)}50%{opacity:1;transform:scale(1.06)}}
+.plain{
+  margin:14px 0 2px;border-radius:14px;padding:14px 16px;
+  background:color-mix(in srgb, var(--tint) 8%, transparent);
+  border:1px solid color-mix(in srgb, var(--tint) 25%, transparent);
+  animation:fadeUp .5s ease both;
+}
+.plain h5{font-size:11.5px;letter-spacing:.12em;color:var(--tint);margin-bottom:6px;font-weight:700}
+.plain p{font-size:14px;line-height:1.9;letter-spacing:-.005em}
 
 /* ===== daily quiz ===== */
 .quiz{
@@ -204,7 +233,11 @@ h1{
   font-size:12.5px;font-weight:600;padding:8px 16px;white-space:nowrap;
 }
 footer{padding:44px 18px 56px;text-align:center;font-size:11.5px;color:var(--muted);line-height:2}
-@media (prefers-reduced-motion:reduce){.row{animation:none}.aff-card{transition:none}}
+@media (prefers-reduced-motion:reduce){
+  .row,.modal,.modal-bg,.m-chart svg,.m-ret,.diag-card,.hero::before,.plain{animation:none}
+  .aff-card,.row{transition:none}
+  .spark polyline,.quiz-chart polyline{animation:none;stroke-dasharray:none;stroke-dashoffset:0}
+}
 @media (max-width:400px){.row{grid-template-columns:22px 1fr 60px 78px;gap:8px}.spark{width:60px}}
 </style>
 </head>
@@ -230,6 +263,7 @@ footer{padding:44px 18px 56px;text-align:center;font-size:11.5px;color:var(--mut
     <button data-tf="1m" class="on">1M</button><button data-tf="3m">3M</button><button data-tf="1y">1Y</button>
   </div></div>
   <div class="m-rets" id="m-rets"></div>
+  <div class="plain" id="m-plain" style="display:none"><h5 id="m-plain-t"></h5><p id="m-plain-p"></p></div>
   <div class="diag">
     <h4 id="m-buy-title">いくらから買える?</h4>
     <div class="diag-grid" id="m-buy"></div>
@@ -392,7 +426,7 @@ function sparkline(pts, upTrend){
   const w=74,h=26,min=Math.min(...pts),max=Math.max(...pts),rng=(max-min)||1;
   const xy=pts.map((p,i)=>`${(i/(pts.length-1)*w).toFixed(1)},${(h-2-((p-min)/rng*(h-4))).toFixed(1)}`).join(" ");
   const col=upTrend?"var(--up)":"var(--down)";
-  return `<svg class="spark" viewBox="0 0 ${w} ${h}" aria-hidden="true"><polyline points="${xy}" style="stroke:${col}"/></svg>`;
+  return `<svg class="spark" viewBox="0 0 ${w} ${h}" aria-hidden="true"><polyline pathLength="1" points="${xy}" style="stroke:${col}"/></svg>`;
 }
 const pct=v=>`${v>=0?"+":""}${v.toFixed(1)}%`;
 const cls=v=>v>=0?"u":"d";
@@ -471,7 +505,7 @@ function renderQuiz(){
   $("quiz-date").textContent=`${now.getMonth()+1}/${now.getDate()}${t("quiz_sub")}`;
   const pts=answer.spark,w=320,h=80,min=Math.min(...pts),max=Math.max(...pts),rng=(max-min)||1;
   const xy=pts.map((p,i)=>`${(i/(pts.length-1)*w).toFixed(1)},${(h-4-((p-min)/rng*(h-8))).toFixed(1)}`).join(" ");
-  $("quiz-svg").innerHTML=`<svg viewBox="0 0 ${w} ${h}"><polyline points="${xy}"/></svg>`;
+  $("quiz-svg").innerHTML=`<svg viewBox="0 0 ${w} ${h}"><polyline pathLength="1" points="${xy}"/></svg>`;
   $("quiz-hint").textContent=`${t("quiz_hint")}: ${answer.m==="JP"?t("quiz_co_jp"):t("quiz_co_us")}/${t("m3")} ${pct(answer.r3m)}`;
 
   const played=store("quiz-"+dayKey);
@@ -529,6 +563,47 @@ function lineSVG(pts){
   return `<svg viewBox="0 0 ${w} ${hh}"><polyline points="${xy}" style="fill:none;stroke:var(--tint);stroke-width:2"/></svg>`;
 }
 let M_STOCK=null, M_TF="1m";
+function countUp(el,target){
+  const t0=performance.now(), dur=600;
+  function step(now){
+    const p=Math.min((now-t0)/dur,1), e=1-Math.pow(1-p,3);
+    el.textContent=pct(target*e);
+    if(p<1)requestAnimationFrame(step);
+  }
+  requestAnimationFrame(step);
+}
+function buildPlain(s,d,st,trendK,heatK){
+  const volTxt=d.vol==null?null:(d.vol>2.5?"hi":d.vol>1.2?"mid":"lo");
+  if(LANG==="ja"){
+    let p="";
+    p+= trendK==="UP"?"この銘柄は3ヶ月ベースで上がり続けています":
+        trendK==="DN"?"この銘柄は3ヶ月ベースで下がり続けています":
+        "この銘柄はいま、上げ下げの切り替わり地点にいます";
+    p+= heatK==="H"?"。ただし直近1週間で急に上がっており、少し過熱気味です":"";
+    if(volTxt) p+= "。値動きの幅は"+(volTxt==="hi"?`大きめ(1日で±${d.vol.toFixed(1)}%動くことも)`:volTxt==="mid"?"普通":"小さめで穏やか");
+    if(d.dd!=null&&d.dd<-3) p+= `。直近の高値からは${Math.abs(d.dd).toFixed(1)}%下の位置です`;
+    if(st){
+      const w=st.win;
+      const feel=w>=55?"2回に1回より少し多い":w>=50?"ほぼ2回に1回":w>=45?"2回に1回より少し少ない":"半分以下";
+      p+= `。過去1年のデータでは、いまと似た状態の銘柄が1ヶ月後に上がっていたのは${w}%——${feel}くらいでした`;
+    }
+    return p+"。";
+  }else{
+    let p="";
+    p+= trendK==="UP"?"This stock has been rising on a 3-month basis":
+        trendK==="DN"?"This stock has been falling on a 3-month basis":
+        "This stock is at a turning point right now";
+    p+= heatK==="H"?", though it jumped sharply this week and looks a bit overheated":"";
+    if(volTxt) p+= volTxt==="hi"?`. Price swings are large (±${d.vol.toFixed(1)}% in a day)`:volTxt==="mid"?". Price swings are moderate":". Price swings are small and calm";
+    if(d.dd!=null&&d.dd<-3) p+= `. It sits ${Math.abs(d.dd).toFixed(1)}% below its recent high`;
+    if(st){
+      const w=st.win;
+      const feel=w>=55?"a bit better than a coin flip":w>=50?"about a coin flip":w>=45?"a bit worse than a coin flip":"less than half the time";
+      p+= `. Over the past year, stocks in a similar state were higher one month later ${w}% of the time — ${feel}`;
+    }
+    return p+".";
+  }
+}
 function diagnose(s){
   const cd=s.cd||[];
   // 変動率: 直近21営業日の日次リターン標準偏差
@@ -554,7 +629,7 @@ function openDetail(tkr){
   $("m-chg").textContent=pct(s.r1w)+" / "+t("r1w");
   $("m-chg").className="m-chg "+cls(s.r1w);
   $("m-rets").innerHTML=["r1w","r1m","r3m"].map(k=>
-    `<div class="m-ret"><small>${t(k)}</small><b class="${cls(s[k])}">${pct(s[k])}</b></div>`).join("");
+    `<div class="m-ret"><small>${t(k)}</small><b class="${cls(s[k])}" data-v="${s[k]}">${pct(s[k])}</b></div>`).join("");
   // いくらから買える?
   $("m-buy-title").textContent=t("buy_title");
   const yen=v=>"¥"+Math.round(v).toLocaleString("ja-JP");
@@ -593,6 +668,13 @@ function openDetail(tkr){
       `<div class="diag-card"><b>${t("odds_med")}</b><span class="val ${st.med>=0?"u":"d"}">${st.med>=0?"+":""}${st.med}%</span></div>`;
     $("m-odds-note").textContent=t("odds_note");
   }else{$("m-odds-wrap").style.display="none";}
+  // つまり、どういうこと?(日常語の自動要約)
+  const plain=buildPlain(s,d,st,trendK,heatK);
+  $("m-plain").style.display="block";
+  $("m-plain-t").textContent=LANG==="ja"?"つまり、どういうこと?":"IN PLAIN WORDS";
+  $("m-plain-p").textContent=plain;
+  // 数字カウントアップ
+  document.querySelectorAll("#m-rets b[data-v]").forEach(b=>countUp(b,+b.dataset.v));
   document.querySelectorAll("#m-seg button").forEach(b=>{b.classList.toggle("on",b.dataset.tf==="1m");});
   renderMChart();
   $("modal-bg").style.display="block";$("modal").style.display="block";
