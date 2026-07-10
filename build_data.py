@@ -124,15 +124,16 @@ def main():
             close = df[tkr]["Close"].dropna()
             if len(close) < 45:   # データ不足はスキップ
                 continue
+            r1d = pct_change(close, 1)     # 前日比
             r1w = pct_change(close, 5)     # 5営業日 ≒ 1週
             r1m = pct_change(close, 21)    # 21営業日 ≒ 1ヶ月
             r3m = pct_change(close, min(63, len(close) - 1))  # 63営業日 ≒ 3ヶ月
-            if None in (r1w, r1m, r3m):
+            if None in (r1d, r1w, r1m, r3m):
                 continue
             entry = {
                 "t": tkr, "n": name, "m": mkt, "c": cur,
                 "p": round(float(close.iloc[-1]), 2),
-                "r1w": r1w, "r1m": r1m, "r3m": r3m,
+                "r1d": r1d, "r1w": r1w, "r1m": r1m, "r3m": r3m,
                 "spark": downsample(close.iloc[-63:], SPARK_POINTS),
                 "cd": candles(df[tkr], None, 63),   # 日足3ヶ月
                 "cw": candles(df[tkr], "W", 52),    # 週足1年
