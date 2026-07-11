@@ -161,6 +161,17 @@ h1{background:linear-gradient(100deg,var(--text) 40%,var(--tint) 50%,var(--text)
 .sim-amt button{flex:1;border:1px solid var(--hair);background:transparent;color:var(--text);border-radius:10px;padding:9px 0;font-size:13px;font-weight:600}
 .sim-amt button.on{background:var(--tint);border-color:var(--tint);color:#fff}
 .sim-hypo{border-style:dashed!important}
+.sim-chart{position:relative;height:196px;display:flex;gap:8px;align-items:flex-end;padding:24px 2px 34px;margin-top:2px}
+.sim-col{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;position:relative}
+.sim-val{font-size:11px;font-weight:700;font-variant-numeric:tabular-nums;margin-bottom:4px;white-space:nowrap}
+.sim-fill{width:100%;max-width:54px;height:0;border-radius:9px 9px 4px 4px;transition:height .9s cubic-bezier(.2,.8,.25,1)}
+.sim-fill.gain{background:linear-gradient(180deg,var(--up),color-mix(in srgb,var(--up) 45%,transparent))}
+.sim-fill.loss{background:linear-gradient(180deg,var(--down),color-mix(in srgb,var(--down) 45%,transparent))}
+.sim-fill.hypo{background:color-mix(in srgb,var(--tint) 18%,transparent);border:1.5px dashed var(--tint)}
+.sim-lab{position:absolute;bottom:-32px;left:0;right:0;text-align:center;font-size:10px;color:var(--muted);line-height:1.25}
+.sim-base{position:absolute;left:0;right:0;border-top:1.5px dashed color-mix(in srgb,var(--text) 45%,transparent);pointer-events:none}
+.sim-base i{position:absolute;right:0;top:-16px;font-size:10px;font-style:normal;color:var(--muted)}
+@media (prefers-reduced-motion:reduce){.sim-fill{transition:none}}
 .plain h5{font-size:11.5px;letter-spacing:.12em;color:var(--tint);margin-bottom:6px;font-weight:700}
 .plain p{font-size:14px;line-height:1.9;letter-spacing:-.005em}
 
@@ -439,6 +450,10 @@ const I18N={
   sim_3m:{ja:"3ヶ月前に買っていたら",en:"Bought 3 months ago"},
   sim_1y:{ja:"1年前に買っていたら",en:"Bought 1 year ago"},
   sim_hypo:{ja:"もし直近3ヶ月と同じペースが1年続いたら(仮定計算)",en:"If the last 3-month pace continued 1 year (hypothetical)"},
+  sim_b1w:{ja:"1週間前",en:"1w ago"},sim_b1m:{ja:"1ヶ月前",en:"1mo ago"},
+  sim_b3m:{ja:"3ヶ月前",en:"3mo ago"},sim_b1y:{ja:"1年前",en:"1y ago"},
+  sim_bh:{ja:"この調子で1年(仮定)",en:"1y at this pace (hyp.)"},
+  sim_base:{ja:"元本",en:"invested"},
   sim_note:{ja:"※上段は過去の株価に基づく事実の計算、最下段は仮定に基づく単純計算です。将来の運用成果を予測・保証するものではありません。手数料・税・為替は考慮していません。",
             en:"Top rows are factual calculations from past prices; the last row is simple arithmetic on an assumption. Not a prediction or guarantee. Fees, tax and FX excluded."},
   buy_title:{ja:"いくらから買える?",en:"Minimum to buy"},
@@ -745,16 +760,40 @@ function renderSim(s){
   const amts=[[10000,LANG==="ja"?"¥1万":"¥10k"],[100000,LANG==="ja"?"¥10万":"¥100k"],[1000000,LANG==="ja"?"¥100万":"¥1M"]];
   $("m-sim-amt").innerHTML=amts.map(([v,l])=>`<button class="${v===SIM_A?"on":""}" data-a="${v}">${l}</button>`).join("");
   document.querySelectorAll("#m-sim-amt button").forEach(b=>b.onclick=()=>{SIM_A=+b.dataset.a;renderSim(s)});
-  const yen=v=>"¥"+Math.round(v).toLocaleString("ja-JP");
+  const fM=v=>LANG==="ja"
+    ?(v>=1e8?"¥"+(v/1e8).toFixed(2)+"億":v>=1e4?"¥"+(v/1e4).toFixed(1)+"万":"¥"+Math.round(v).toLocaleString())
+    :"¥"+Math.round(v).toLocaleString();
   const r1y=(s.cw&&s.cw.length>1)?((s.p/s.cw[0][3]-1)*100):null;
-  const rows=[["sim_1w",s.r1w],["sim_1m",s.r1m],["sim_3m",s.r3m]];
-  if(r1y!=null)rows.push(["sim_1y",r1y]);
   const hypo=(Math.pow(1+s.r3m/100,4)-1)*100;   // 3ヶ月ペース×4期の複利(仮定)
-  $("m-sim").innerHTML=rows.map(([k,r])=>{
-    const v=SIM_A*(1+r/100), d=v-SIM_A;
-    return `<div class="diag-card"><b>${t(k)}</b><span class="val ${cls(d)}">${yen(v)}(${d>=0?"+":"−"}${yen(Math.abs(d)).slice(1)})</span></div>`;
-  }).join("")+
-  `<div class="diag-card sim-hypo"><b>${t("sim_hypo")}</b><span class="val ${cls(hypo)}">${yen(SIM_A*(1+hypo/100))}</span></div>`;
+  const bars=[["sim_b1w",s.r1w,0],["sim_b1m",s.r1m,0],["sim_b3m",s.r3m,0]];
+  if(r1y!=null)bars.push(["sim_b1y",r1y,0]);
+  bars.push(["sim_bh",hypo,1]);
+  const vals=bars.map(b=>SIM_A*(1+b[1]/100));
+  const maxV=Math.max(...vals,SIM_A)*1.08, AREA=138;
+  const basePx=SIM_A/maxV*AREA;
+  $("m-sim").innerHTML=`<div class="sim-chart">
+    <div class="sim-base" style="bottom:${(34+basePx).toFixed(0)}px"><i>${t("sim_base")} ${fM(SIM_A)}</i></div>
+    ${bars.map(([k,r,hy],i)=>{
+      const v=vals[i], cl=hy?"hypo":(v>=SIM_A?"gain":"loss");
+      return `<div class="sim-col">
+        <span class="sim-val ${hy?"":cls(v-SIM_A)}" data-m="${v.toFixed(0)}">${fM(0)}</span>
+        <div class="sim-fill ${cl}" data-h="${(v/maxV*AREA).toFixed(0)}"></div>
+        <span class="sim-lab">${t(k)}</span>
+      </div>`;
+    }).join("")}
+  </div>`;
+  // 棒の成長+金額カウントアップ
+  setTimeout(()=>{
+    document.querySelectorAll("#m-sim .sim-fill").forEach(f=>{f.style.height=f.dataset.h+"px"});
+    document.querySelectorAll("#m-sim .sim-val").forEach(el=>{
+      const tgt=+el.dataset.m, t0=performance.now();
+      (function step(now){
+        const p=Math.min((now-t0)/800,1), e=1-Math.pow(1-p,3);
+        el.textContent=fM(tgt*e);
+        if(p<1)requestAnimationFrame(step);
+      })(t0);
+    });
+  },40);
   $("m-sim-note").textContent=t("sim_note");
 }
 let M_CANDLES=null;
