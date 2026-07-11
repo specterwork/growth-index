@@ -172,6 +172,31 @@ h1{background:linear-gradient(100deg,var(--text) 40%,var(--tint) 50%,var(--text)
 .sim-base{position:absolute;left:0;right:0;border-top:1.5px dashed color-mix(in srgb,var(--text) 45%,transparent);pointer-events:none}
 .sim-base i{position:absolute;right:0;top:-16px;font-size:10px;font-style:normal;color:var(--muted)}
 @media (prefers-reduced-motion:reduce){.sim-fill{transition:none}}
+/* 🔰ガイド */
+.guide-btn{display:inline-flex;align-items:center;gap:6px;margin-top:14px;border:1px solid var(--hair);background:var(--card);color:var(--text);border-radius:999px;padding:8px 16px;font-size:12.5px;font-weight:600;box-shadow:var(--shadow)}
+.ob{position:fixed;left:0;right:0;bottom:0;z-index:60;display:none;background:var(--card);border-radius:22px 22px 0 0;max-height:86vh;overflow-y:auto;padding:18px 20px 30px;box-shadow:0 -10px 40px rgba(0,0,0,.4);animation:slideUp .4s cubic-bezier(.2,.9,.25,1)}
+.ob-bg{position:fixed;inset:0;z-index:59;display:none;background:rgba(0,0,0,.55);-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px);animation:fadeIn .3s}
+.ob h3{font-size:19px;letter-spacing:-.02em;margin:16px 0 6px}
+.ob h3:first-of-type{margin-top:6px}
+.ob p{font-size:13.5px;line-height:1.9;color:var(--muted)}
+.ob p b{color:var(--text)}
+.ob-ok{display:block;width:100%;margin-top:20px;background:var(--tint);color:#fff;border:none;border-radius:13px;padding:15px;font-size:15px;font-weight:700}
+/* ?解説 */
+.qmark{width:17px;height:17px;border-radius:50%;border:1px solid var(--hair);background:transparent;color:var(--muted);font-size:11px;line-height:1;padding:0;margin-left:8px;vertical-align:1px}
+.explain{display:none;font-size:12.5px;line-height:1.9;color:var(--muted);background:color-mix(in srgb,var(--text) 4%,transparent);border-radius:10px;padding:10px 13px;margin:8px 0 10px}
+.explain.on{display:block;animation:fadeUp .3s ease}
+/* マーケット・パルス */
+.pulse{background:var(--card);border:1px solid var(--hair);border-radius:18px;box-shadow:var(--shadow);padding:18px 16px 6px;margin-bottom:14px;text-align:center}
+.pulse svg{width:200px;height:110px;display:block;margin:0 auto}
+.pulse .arc-bg{fill:none;stroke:color-mix(in srgb,var(--text) 9%,transparent);stroke-width:12;stroke-linecap:round}
+.pulse .arc-fg{fill:none;stroke-width:12;stroke-linecap:round;transition:stroke-dashoffset 1.2s cubic-bezier(.2,.8,.2,1)}
+.pulse-num{font-size:30px;font-weight:700;letter-spacing:-.02em;font-variant-numeric:tabular-nums;margin-top:-58px}
+.pulse-cap{font-size:12px;color:var(--muted);margin:34px 0 12px}
+/* 1-3位メダル */
+.rk.r1,.rk.r2,.rk.r3{width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;color:#1d1d1f;margin:0 auto}
+.rk.r1{background:linear-gradient(135deg,#ffe27a,#d9a514)}
+.rk.r2{background:linear-gradient(135deg,#e8e8ee,#a9a9b5)}
+.rk.r3{background:linear-gradient(135deg,#f2c29b,#b0713d)}
 .plain h5{font-size:11.5px;letter-spacing:.12em;color:var(--tint);margin-bottom:6px;font-weight:700}
 .plain p{font-size:14px;line-height:1.9;letter-spacing:-.005em}
 
@@ -298,11 +323,25 @@ footer{padding:44px 18px 56px;text-align:center;font-size:11.5px;color:var(--mut
 
 <div class="tape"><div class="tape-in" id="tape"></div></div>
 
+<div class="ob-bg" id="ob-bg"></div>
+<div class="ob" id="ob">
+  <div class="modal-grip"></div>
+  <h3 data-i18n="ob1t">① このサイトは何?</h3>
+  <p data-i18n="ob1p">日米の株価を毎朝自動で集計し、成長率で並べただけの「データの一覧表」です。売買のおすすめは一切しません——判断材料を、ぜんぶ見せるだけ。</p>
+  <h3 data-i18n="ob2t">② 使い方は3つだけ</h3>
+  <p data-i18n="ob2p">ランキングを眺める → 気になる銘柄をタップ(チャートは指でなぞれます)→ 青い「つまり、どういうこと?」を読む。難しい数字は、そこが日本語に翻訳します。</p>
+  <h3 data-i18n="ob3t">③ 怖くない始め方</h3>
+  <p data-i18n="ob3p">株は1株数千円から買えます(詳細画面の「いくらから買える?」参照)。ただし上がる保証はどこにもありません——このサイトの統計が正直にそう示しています。余裕資金で、少額から。</p>
+  <button class="ob-ok" id="ob-ok" data-i18n="ob_ok">わかった、見てみる</button>
+</div>
+
 <div class="modal-bg" id="modal-bg"></div>
 <div class="modal" id="modal">
   <div class="modal-grip"></div>
   <div class="m-head"><b id="m-name"></b><button class="m-close" id="m-close">✕</button></div>
   <div><span class="m-price" id="m-price"></span><span class="m-chg" id="m-chg"></span></div>
+  <div style="text-align:right;margin-top:8px"><button class="qmark" data-x="x_price">?</button></div>
+  <div class="explain" id="x_price" data-i18n="x_price">緑の棒=その日「上がった日」、赤=「下がった日」。棒から伸びるヒゲは、その日の最高値と最安値。チャートを指でなぞると各日の値が見られます。</div>
   <div class="m-chart" id="m-chart">
     <div id="m-svgwrap"></div>
     <div id="m-xline"></div>
@@ -314,23 +353,27 @@ footer{padding:44px 18px 56px;text-align:center;font-size:11.5px;color:var(--mut
   <div class="m-rets" id="m-rets"></div>
   <div class="plain" id="m-plain" style="display:none"><h5 id="m-plain-t"></h5><p id="m-plain-p"></p></div>
   <div class="diag" id="m-sim-wrap">
-    <h4 id="m-sim-title"></h4>
+    <h4 id="m-sim-title"></h4><button class="qmark" data-x="x_sim" style="position:absolute;margin-top:-24px;right:34px">?</button>
+    <div class="explain" id="x_sim" data-i18n="x_sim">「もし過去に買っていたら今いくらか」の計算(実データ)。点線の棒だけは「この調子が続いたら」という仮定の話で、予測ではありません。</div>
     <div class="sim-amt" id="m-sim-amt"></div>
     <div class="diag-grid" id="m-sim"></div>
     <div class="diag-note" id="m-sim-note"></div>
   </div>
   <div class="diag">
-    <h4 id="m-buy-title">いくらから買える?</h4>
+    <h4 id="m-buy-title">いくらから買える?<button class="qmark" data-x="x_buy">?</button></h4>
+    <div class="explain" id="x_buy" data-i18n="x_buy">日本株はふつう100株単位ですが、「ミニ株」なら1株から買えます。米国株は最初から1株単位。まずは1株から試すのが定石です。</div>
     <div class="diag-grid" id="m-buy"></div>
     <div class="diag-note" id="m-buy-note"></div>
   </div>
   <div class="diag">
-    <h4 id="m-diag-title">DATA SIGNALS ── データ所見</h4>
+    <h4 id="m-diag-title">DATA SIGNALS ── データ所見<button class="qmark" data-x="x_diag">?</button></h4>
+    <div class="explain" id="x_diag" data-i18n="x_diag">価格の動きだけから機械的に判定した「いまの状態」。トレンド=大きな流れの向き、過熱度=直近で急ぎすぎていないか、変動=値動きの荒さ、です。</div>
     <div class="diag-grid" id="m-diag"></div>
     <div class="diag-note" id="m-diag-note"></div>
   </div>
   <div class="diag" id="m-odds-wrap" style="display:none">
-    <h4 id="m-odds-title">HISTORICAL ODDS ── 過去の統計</h4>
+    <h4 id="m-odds-title">HISTORICAL ODDS ── 過去の統計<button class="qmark" data-x="x_odds">?</button></h4>
+    <div class="explain" id="x_odds" data-i18n="x_odds">過去1年、いまと同じ状態だった銘柄が「その後どうなったか」の実績集計。未来の予言ではなく、歴史の成績表です。</div>
     <div class="diag-grid" id="m-odds"></div>
     <div class="diag-note" id="m-odds-note"></div>
   </div>
@@ -341,7 +384,10 @@ footer{padding:44px 18px 56px;text-align:center;font-size:11.5px;color:var(--mut
     <canvas id="fx" aria-hidden="true"></canvas>
     <h1 data-i18n-html="hero_h1">伸びてる企業、<br>データで一覧。</h1>
     <p data-i18n="hero_p">日米の株価を毎日自動集計。成長率で、ただ並べる。</p>
+    <button class="guide-btn" id="btn-guide">🔰 <span data-i18n="guide_btn">はじめての方は1分ガイド</span></button>
   </section>
+
+  <div class="pulse reveal" id="pulse"></div>
 
   <div class="seg-row">
     <div class="seg" id="seg-market">
@@ -456,6 +502,28 @@ const I18N={
   sim_base:{ja:"元本",en:"invested"},
   sim_note:{ja:"※上段は過去の株価に基づく事実の計算、最下段は仮定に基づく単純計算です。将来の運用成果を予測・保証するものではありません。手数料・税・為替は考慮していません。",
             en:"Top rows are factual calculations from past prices; the last row is simple arithmetic on an assumption. Not a prediction or guarantee. Fees, tax and FX excluded."},
+  guide_btn:{ja:"はじめての方は1分ガイド",en:"New here? 1-min guide"},
+  ob1t:{ja:"① このサイトは何?",en:"① What is this site?"},
+  ob1p:{ja:"日米の株価を毎朝自動で集計し、成長率で並べただけの「データの一覧表」です。売買のおすすめは一切しません——判断材料を、ぜんぶ見せるだけ。",
+        en:"A plain data table: Japan & US stocks, auto-updated every morning, sorted by growth. No buy/sell recommendations — just all the evidence, in the open."},
+  ob2t:{ja:"② 使い方は3つだけ",en:"② Three ways to use it"},
+  ob2p:{ja:"ランキングを眺める → 気になる銘柄をタップ(チャートは指でなぞれます)→ 青い「つまり、どういうこと?」を読む。難しい数字は、そこが日本語に翻訳します。",
+        en:"Browse the ranking → tap a stock (drag your finger on the chart) → read the blue \"In plain words\" box. It translates the hard numbers for you."},
+  ob3t:{ja:"③ 怖くない始め方",en:"③ How to start small"},
+  ob3p:{ja:"株は1株数千円から買えます(詳細画面の「いくらから買える?」参照)。ただし上がる保証はどこにもありません——このサイトの統計が正直にそう示しています。余裕資金で、少額から。",
+        en:"You can start with a single share (see \"Minimum to buy\"). But nothing guarantees gains — this site's own stats say so honestly. Spare money only, start small."},
+  ob_ok:{ja:"わかった、見てみる",en:"Got it, let me look"},
+  x_price:{ja:"緑の棒=その日「上がった日」、赤=「下がった日」。棒から伸びるヒゲは、その日の最高値と最安値。チャートを指でなぞると各日の値が見られます。",
+           en:"Green bar = the price rose that day, red = it fell. The thin wicks show that day's high and low. Drag your finger across the chart to inspect each day."},
+  x_buy:{ja:"日本株はふつう100株単位ですが、「ミニ株」なら1株から買えます。米国株は最初から1株単位。まずは1株から試すのが定石です。",
+         en:"Japanese stocks normally trade in lots of 100, but fractional services let you buy 1 share. US stocks trade by the share. Starting with one share is the classic first step."},
+  x_diag:{ja:"価格の動きだけから機械的に判定した「いまの状態」。トレンド=大きな流れの向き、過熱度=直近で急ぎすぎていないか、変動=値動きの荒さ、です。",
+          en:"The stock's current condition, judged mechanically from price alone. Trend = the big direction, heat = whether it rose too fast recently, volatility = how wild the moves are."},
+  x_odds:{ja:"過去1年、いまと同じ状態だった銘柄が「その後どうなったか」の実績集計。未来の予言ではなく、歴史の成績表です。",
+          en:"How stocks in the same state actually performed over the past year. Not a prophecy — a report card of history."},
+  x_sim:{ja:"「もし過去に買っていたら今いくらか」の計算(実データ)。点線の棒だけは「この調子が続いたら」という仮定の話で、予測ではありません。",
+         en:"What your money would be worth if you had bought in the past (real data). Only the dashed bar is a what-if assumption, not a forecast."},
+  pulse_cap:{ja:"今日、上昇している銘柄の割合",en:"Share of stocks up today"},
   buy_title:{ja:"いくらから買える?",en:"Minimum to buy"},
   buy_mini:{ja:"ミニ株(1株)",en:"Fractional (1 share)"},
   buy_lot:{ja:"単元(100株)",en:"Standard lot (100 sh.)"},
@@ -484,7 +552,7 @@ function applyLang(){
   document.documentElement.lang=LANG;
   document.querySelectorAll("[data-i18n]").forEach(el=>el.textContent=t(el.dataset.i18n));
   document.querySelectorAll("[data-i18n-html]").forEach(el=>el.innerHTML=t(el.dataset.i18nHtml));
-  if(DATA){setStamp();render();renderVS();renderQuiz();}
+  if(DATA){setStamp();render();renderVS();renderQuiz();renderGauge();}
 }
 $("btn-lang").onclick=()=>{LANG=LANG==="ja"?"en":"ja";applyLang()};
 
@@ -511,7 +579,7 @@ function render(){
   $("board").innerHTML = rows.length ? rows.map((s,i)=>{
     const v=s[PERIOD];
     return `<div class="row tapable" data-t="${s.t}" style="animation-delay:${Math.min(i*28,400)}ms">
-      <div class="rk ${i<3?"top":""}">${i+1}</div>
+      <div class="rk ${i<3?"top r"+(i+1):""}">${i+1}</div>
       <div class="nm">
         <b><span>${dispName(s)}</span><span class="flag">${s.m==="JP"?"🇯🇵":"🇺🇸"}</span></b>
         <small>${s.t.replace(".T","")}・${fmtP(s.p,s.c)}　${t("w")} ${pct(s.r1w)}／${t("m1")} ${pct(s.r1m)}／${t("m3")} ${pct(s.r3m)}</small>
@@ -866,6 +934,46 @@ function renderTicker(){
   const html=top.map(s=>`<span class="${cls(s.r1d)}">${s.t.replace(".T","")} ${s.r1d>=0?"▲":"▼"}${Math.abs(s.r1d).toFixed(1)}%</span>`).join("");
   $("tape").innerHTML=html+html;
 }
+function renderGauge(){
+  if(!DATA)return;
+  const n=DATA.stocks.length; if(!n)return;
+  const up=DATA.stocks.filter(s=>(s.r1d||0)>=0).length;
+  const ratio=up/n, pct=Math.round(ratio*100);
+  const R=78, C=Math.PI*R;   // 半円の弧長
+  const col=ratio>=0.5?"var(--up)":"var(--down)";
+  $("pulse").innerHTML=`
+    <svg viewBox="0 0 200 110">
+      <path class="arc-bg" d="M 22 100 A ${R} ${R} 0 0 1 178 100"/>
+      <path class="arc-fg" id="arc" d="M 22 100 A ${R} ${R} 0 0 1 178 100"
+        stroke="${col}" stroke-dasharray="${C.toFixed(1)}" stroke-dashoffset="${C.toFixed(1)}"/>
+    </svg>
+    <div class="pulse-num" id="pulse-num">0%</div>
+    <div class="pulse-cap">${t("pulse_cap")}(${up}/${n})</div>`;
+  setTimeout(()=>{
+    const a=$("arc"); if(a&&a.style)a.style.strokeDashoffset=(C*(1-ratio)).toFixed(1);
+    const el=$("pulse-num"), t0=performance.now();
+    (function step(now){
+      const p=Math.min((now-t0)/1100,1), e=1-Math.pow(1-p,3);
+      el.textContent=Math.round(pct*e)+"%";
+      if(p<1)requestAnimationFrame(step);
+    })(t0);
+  },60);
+}
+function initGuide(){
+  const show=()=>{$("ob").style.display="block";$("ob-bg").style.display="block";document.body.style.overflow="hidden"};
+  const hide=()=>{$("ob").style.display="none";$("ob-bg").style.display="none";document.body.style.overflow="";
+    try{localStorage.setItem("ob-seen","1")}catch(e){}};
+  $("ob-ok").onclick=hide;$("ob-bg").onclick=hide;
+  $("btn-guide").onclick=show;
+  let seen=null; try{seen=localStorage.getItem("ob-seen")}catch(e){}
+  if(!seen)show();
+}
+function initQmarks(){
+  document.querySelectorAll(".qmark").forEach(b=>b.onclick=e=>{
+    e.stopPropagation();
+    const x=$(b.dataset.x); if(x)x.classList.toggle("on");
+  });
+}
 function reveal(){
   const els=document.querySelectorAll(".reveal");
   if(typeof IntersectionObserver==="undefined"){els.forEach(e=>e.classList.add("in"));return}
@@ -929,7 +1037,7 @@ fetch("data.json",{cache:"no-store"})
   .then(r=>{if(!r.ok)throw 0;return r.json()})
   .then(j=>{DATA=j})
   .catch(()=>{DATA=DEMO})
-  .finally(()=>{normalize();applyLang();renderTicker();reveal();initFX();});
+  .finally(()=>{normalize();applyLang();renderTicker();reveal();initFX();renderGauge();initGuide();initQmarks();});
 </script>
 </body>
 </html>
