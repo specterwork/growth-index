@@ -87,8 +87,18 @@ h1{
 .m-close{border:none;background:transparent;color:var(--muted);font-size:22px;line-height:1;padding:4px}
 .m-price{font-size:26px;font-weight:700;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
 .m-chg{font-size:14px;font-weight:600;margin-left:8px}
-.m-chart{margin:14px 0 10px}
-.m-chart svg{width:100%;height:210px;display:block}
+.m-chart{margin:14px 0 10px;position:relative;perspective:700px;touch-action:pan-y}
+.m-chart svg{width:100%;height:210px;display:block;transition:transform .25s ease;will-change:transform}
+.m-chart g.cnd{animation:candleIn .45s cubic-bezier(.2,.85,.25,1) both;transform-box:fill-box;transform-origin:50% 100%}
+@keyframes candleIn{from{opacity:0;transform:scaleY(.35) translateY(8px)}to{opacity:1;transform:none}}
+#m-xline{position:absolute;top:0;bottom:0;width:1px;background:var(--tint);opacity:.75;display:none;pointer-events:none}
+.scrub-tip{
+  position:absolute;top:-6px;transform:translateX(-50%);
+  background:var(--card);border:1px solid var(--hair);box-shadow:var(--shadow);
+  border-radius:10px;padding:6px 11px;font-size:11px;font-variant-numeric:tabular-nums;
+  white-space:nowrap;display:none;pointer-events:none;z-index:2;
+}
+.scrub-tip b{font-size:11px;margin-right:6px}
 .m-seg{display:flex;justify-content:center;margin-bottom:8px}
 .m-rets{display:flex;gap:8px;margin:12px 0 4px}
 .m-ret{flex:1;background:color-mix(in srgb, var(--text) 4%, transparent);border-radius:12px;padding:10px 6px;text-align:center}
@@ -256,7 +266,8 @@ footer{padding:44px 18px 56px;text-align:center;font-size:11.5px;color:var(--mut
   .row,.modal,.modal-bg,.m-chart svg,.m-ret,.diag-card,.hero::before,.plain{animation:none}
   .aff-card,.row{transition:none}
   .spark polyline,.quiz-chart polyline{animation:none;stroke-dasharray:none;stroke-dashoffset:0}
-  .tape-in,h1,.livedot{animation:none}
+  .tape-in,h1,.livedot,.m-chart g.cnd{animation:none}
+  .m-chart svg{transition:none}
   .reveal{opacity:1;transform:none;transition:none}
 }
 @media (max-width:400px){.row{grid-template-columns:22px 1fr 60px 78px;gap:8px}.spark{width:60px}}
@@ -281,7 +292,11 @@ footer{padding:44px 18px 56px;text-align:center;font-size:11.5px;color:var(--mut
   <div class="modal-grip"></div>
   <div class="m-head"><b id="m-name"></b><button class="m-close" id="m-close">✕</button></div>
   <div><span class="m-price" id="m-price"></span><span class="m-chg" id="m-chg"></span></div>
-  <div class="m-chart" id="m-chart"></div>
+  <div class="m-chart" id="m-chart">
+    <div id="m-svgwrap"></div>
+    <div id="m-xline"></div>
+    <div class="scrub-tip" id="m-tip"></div>
+  </div>
   <div class="m-seg"><div class="seg" id="m-seg">
     <button data-tf="1m" class="on">1M</button><button data-tf="3m">3M</button><button data-tf="1y">1Y</button>
   </div></div>
@@ -589,9 +604,10 @@ function candleSVG(candles){
   candles.forEach((c,i)=>{
     const x=pad+(i+0.5)*(w-pad*2)/n;
     const up=c[3]>=c[0], col=up?"var(--up)":"var(--down)";
+    out+=`<g class="cnd" style="animation-delay:${Math.min(i*13,760)}ms">`;
     out+=`<line x1="${x.toFixed(1)}" x2="${x.toFixed(1)}" y1="${y(c[1]).toFixed(1)}" y2="${y(c[2]).toFixed(1)}" stroke="${col}" stroke-width="1"/>`;
     const top=y(Math.max(c[0],c[3])), bh=Math.max(1,Math.abs(y(c[0])-y(c[3])));
-    out+=`<rect x="${(x-bw/2).toFixed(1)}" y="${top.toFixed(1)}" width="${bw.toFixed(1)}" height="${bh.toFixed(1)}" fill="${col}" rx="0.5"/>`;
+    out+=`<rect x="${(x-bw/2).toFixed(1)}" y="${top.toFixed(1)}" width="${bw.toFixed(1)}" height="${bh.toFixed(1)}" fill="${col}" rx="0.5"/></g>`;
   });
   // 高値・安値ラベル
   out+=`<text x="${w-pad}" y="${y(hi)+10}" text-anchor="end" font-size="10" fill="var(--muted)">${hi.toLocaleString()}</text>`;
@@ -741,14 +757,53 @@ function renderSim(s){
   `<div class="diag-card sim-hypo"><b>${t("sim_hypo")}</b><span class="val ${cls(hypo)}">${yen(SIM_A*(1+hypo/100))}</span></div>`;
   $("m-sim-note").textContent=t("sim_note");
 }
+let M_CANDLES=null;
 function renderMChart(){
   const s=M_STOCK; if(!s)return;
-  let html="";
-  if(M_TF==="1m"&&s.cd&&s.cd.length) html=candleSVG(s.cd.slice(-21));
-  else if(M_TF==="3m"&&s.cd&&s.cd.length) html=candleSVG(s.cd);
-  else if(M_TF==="1y"&&s.cw&&s.cw.length) html=candleSVG(s.cw);
+  let html="";M_CANDLES=null;
+  if(M_TF==="1m"&&s.cd&&s.cd.length){M_CANDLES=s.cd.slice(-21);html=candleSVG(M_CANDLES);}
+  else if(M_TF==="3m"&&s.cd&&s.cd.length){M_CANDLES=s.cd;html=candleSVG(M_CANDLES);}
+  else if(M_TF==="1y"&&s.cw&&s.cw.length){M_CANDLES=s.cw;html=candleSVG(M_CANDLES);}
   else html=lineSVG(s.spark); // 旧data.json用フォールバック
-  $("m-chart").innerHTML=html;
+  $("m-svgwrap").innerHTML=html;
+  bindScrub();
+}
+function bindScrub(){
+  if(bindScrub.done)return;
+  const box=$("m-chart"); if(!box||!box.addEventListener)return;
+  bindScrub.done=true;
+  let RM=false; try{RM=matchMedia("(prefers-reduced-motion: reduce)").matches}catch(e){}
+  const hide=()=>{
+    $("m-xline").style.display="none";$("m-tip").style.display="none";
+    const svg=box.querySelector&&box.querySelector("svg"); if(svg)svg.style.transform="";
+  };
+  const move=e=>{
+    if(!M_CANDLES){hide();return}
+    const r=box.getBoundingClientRect();
+    const cx=(e.touches?e.touches[0].clientX:e.clientX)-r.left;
+    const cy=(e.touches?e.touches[0].clientY:e.clientY)-r.top;
+    if(cx<0||cx>r.width||cy<0||cy>r.height){hide();return}
+    const n=M_CANDLES.length, i=Math.min(n-1,Math.max(0,Math.floor(cx/r.width*n)));
+    const c=M_CANDLES[i];
+    $("m-xline").style.display="block";
+    $("m-xline").style.left=((i+0.5)/n*r.width).toFixed(1)+"px";
+    const ago=n-1-i;
+    const unit=M_TF==="1y"?(LANG==="ja"?"週":"w"):(LANG==="ja"?"日":"d");
+    const lab=ago===0?(LANG==="ja"?"最新":"now"):(LANG==="ja"?`${ago}${unit}前`:`${ago}${unit} ago`);
+    const up=c[3]>=c[0], f=v=>v.toLocaleString();
+    const tip=$("m-tip");
+    tip.style.display="block";
+    tip.style.left=Math.max(70,Math.min(r.width-70,cx)).toFixed(0)+"px";
+    tip.innerHTML=`<b class="${up?"u":"d"}">${lab}</b>O ${f(c[0])} H ${f(c[1])} L ${f(c[2])} C ${f(c[3])}`;
+    if(!RM){
+      const svg=box.querySelector&&box.querySelector("svg");
+      if(svg)svg.style.transform=`rotateX(${(-(cy/r.height-.5)*5).toFixed(2)}deg) rotateY(${((cx/r.width-.5)*6).toFixed(2)}deg)`;
+    }
+  };
+  box.addEventListener("pointermove",move,{passive:true});
+  box.addEventListener("pointerdown",move,{passive:true});
+  box.addEventListener("pointerleave",hide);
+  box.addEventListener("pointercancel",hide);
 }
 document.querySelectorAll("#m-seg button").forEach(b=>b.onclick=()=>{
   M_TF=b.dataset.tf;
