@@ -40,7 +40,7 @@ UNIVERSE = [
     # ("ASML.AS","ASML","EU","€"), ("SAP.DE","SAP","EU","€"),
 ]
 
-TOP_N = 30          # 上位何銘柄を出力するか（総合スコア順）
+TOP_N = 36          # 上位何銘柄を出力するか（総合スコア順）
 SPARK_POINTS = 24   # スパークラインの点数
 
 def pct_change(series, days_ago):
@@ -148,17 +148,18 @@ def main():
     for s in stocks:
         s.pop("_score")
     # 為替(米国株の円換算表示用)
-    fx = None
+    fx = fxe = None
     try:
-        fxs = yf.download("USDJPY=X", period="5d", interval="1d",
-                          auto_adjust=True, progress=False)["Close"].dropna()
-        fx = round(float(fxs.iloc[-1]), 2)
+        fxs = yf.download(["USDJPY=X","EURJPY=X"], period="5d", interval="1d",
+                          auto_adjust=True, progress=False, group_by="ticker")
+        fx  = round(float(fxs["USDJPY=X"]["Close"].dropna().iloc[-1]), 2)
+        fxe = round(float(fxs["EURJPY=X"]["Close"].dropna().iloc[-1]), 2)
     except Exception as e:
         print("fx skip:", e)
 
     out = {
         "stats": backtest_stats(df, UNIVERSE),
-        "fx": fx,
+        "fx": fx, "fxe": fxe,
         "updated": datetime.datetime.now(
             datetime.timezone(datetime.timedelta(hours=9))).isoformat(timespec="minutes"),
         "demo": False,

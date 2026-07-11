@@ -5,7 +5,7 @@ GROWTH INDEX 投稿ネタ自動生成
 - 出力: posts/latest.md（毎朝これをコピペ/撮影するだけ）
 - 実行: python build_posts.py（build_data.py の後に実行。Actionsが自動でやる）
 """
-import json, os, datetime
+import json, os, shutil, datetime
 
 SITE_URL = "https://example.com/"   # ← 公開後のGitHub Pages URLに変更
 HASHTAGS = "#米国株 #日本株 #投資初心者"
@@ -88,6 +88,10 @@ def main():
     md.append("## 今週の急騰メモ（リプ・引用用の小ネタ）\n```")
     md.append(f"{hot['n']}、今週だけで{pct(hot['r1w'])}。出来すぎな時ほど冷静に。{SITE_URL}")
     md.append("```\n")
+
+    # 当日データを恒久アーカイブ(コードは真似できても歴史は真似できない)
+    os.makedirs("posts/history", exist_ok=True)
+    shutil.copy("data.json", f"posts/history/{d.strftime('%Y-%m-%d')}.json")
 
     os.makedirs("posts", exist_ok=True)
     text = "\n".join(md)
