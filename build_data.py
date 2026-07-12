@@ -144,6 +144,8 @@ def main():
             stocks.append(entry)
         except Exception as e:
             print(f"skip {tkr}: {e}")
+    if len(stocks) < 30:
+        raise SystemExit(f"品質ゲート: 取得成功 {len(stocks)} 銘柄 (<30)。更新を中止し前回データを維持します。")
     stocks.sort(key=lambda s: s["_score"], reverse=True)
     for s in stocks:
         s.pop("_score")
@@ -158,6 +160,7 @@ def main():
         print("fx skip:", e)
 
     out = {
+        "universe": len(UNIVERSE), "fetched": len(stocks),
         "stats": backtest_stats(df, UNIVERSE),
         "fx": fx, "fxe": fxe,
         "updated": datetime.datetime.now(

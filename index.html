@@ -5,6 +5,14 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>GROWTH INDEX｜伸びてる企業、データで一覧。</title>
 <meta name="description" content="日米の株式データを毎日自動集計し、1週間・1ヶ月・3ヶ月の成長率でランキング表示。数式は全公開。投資助言ではありません。">
+<meta property="og:title" content="GROWTH INDEX｜伸びてる企業、データで一覧。">
+<meta property="og:description" content="日米欧の株価を毎朝自動集計。成長率ランキング、ローソク足、過去統計、日替わり株クイズ。3言語対応。">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://specterwork.github.io/growth-index/">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="GROWTH INDEX｜伸びてる企業、データで一覧。">
+<meta name="twitter:description" content="日米欧の株価を毎朝自動集計。ランキング・統計・株クイズ。">
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"WebSite","name":"GROWTH INDEX","url":"https://specterwork.github.io/growth-index/","inLanguage":["ja","en","zh"]}</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -173,6 +181,7 @@ h1{background:linear-gradient(100deg,var(--text) 40%,var(--tint) 50%,var(--text)
 .sim-base{position:absolute;left:0;right:0;border-top:1.5px dashed color-mix(in srgb,var(--text) 45%,transparent);pointer-events:none}
 .sim-base i{position:absolute;right:0;top:-16px;font-size:10px;font-style:normal;color:var(--muted)}
 @media (prefers-reduced-motion:reduce){.sim-fill{transition:none}}
+.stale{display:none;background:#3a2a12;border:1px solid #6b4c1e;color:#eec98a;border-radius:12px;padding:11px 14px;font-size:12.5px;line-height:1.7;margin-bottom:14px}
 /* 🔰ガイド */
 .guide-btn{display:inline-flex;align-items:center;gap:6px;margin-top:14px;border:1px solid var(--hair);background:var(--card);color:var(--text);border-radius:999px;padding:8px 16px;font-size:12.5px;font-weight:600;box-shadow:var(--shadow)}
 .ob{position:fixed;left:0;right:0;bottom:0;z-index:60;display:none;background:var(--card);border-radius:22px 22px 0 0;max-height:86vh;overflow-y:auto;padding:18px 20px 30px;box-shadow:0 -10px 40px rgba(0,0,0,.4);animation:slideUp .4s cubic-bezier(.2,.9,.25,1)}
@@ -388,6 +397,8 @@ footer{padding:44px 18px 56px;text-align:center;font-size:11.5px;color:var(--mut
     <button class="guide-btn" id="btn-guide">🔰 <span data-i18n="guide_btn">はじめての方は1分ガイド</span></button>
   </section>
 
+  <div class="stale" id="stale"></div>
+
   <div class="pulse reveal" id="pulse"></div>
 
   <div class="seg-row">
@@ -469,6 +480,7 @@ const $=id=>document.getElementById(id);
 let DATA=null, MARKET="ALL", PERIOD="score";
 
 /* ===== i18n ===== */
+const ZH_EXTRA={stale_warn:"⚠ 该数据为{d}天前的数据(可能因休市或更新延迟),与最新价格可能不同。",scope_note:"对象为本站选定的日美欧主要{n}只股票(并非全部上市公司)。"};
 const ZH={
   hero_h1:"增长中的公司,<br>用数据一览。",hero_p:"日美欧股价每日自动汇总。只按增长率排序。",
   all:"全部",jp:"🇯🇵 日本",us:"🇺🇸 美国",eu:"🇪🇺 欧洲",
@@ -573,6 +585,10 @@ const I18N={
   x_sim:{ja:"「もし過去に買っていたら今いくらか」の計算(実データ)。点線の棒だけは「この調子が続いたら」という仮定の話で、予測ではありません。",
          en:"What your money would be worth if you had bought in the past (real data). Only the dashed bar is a what-if assumption, not a forecast."},
   pulse_cap:{ja:"今日、上昇している銘柄の割合",en:"Share of stocks up today"},
+  stale_warn:{ja:"⚠ このデータは{d}日前のものです。市場休場か更新の遅延の可能性があります。最新値とは異なる場合があります。",
+              en:"⚠ This data is {d} days old (market holiday or update delay). Figures may differ from current prices."},
+  scope_note:{ja:"対象は当サイトが選定した日米欧の主要{n}銘柄です(全上場銘柄ではありません)。",
+              en:"Coverage: {n} major JP/US/EU stocks selected by this site (not the entire market)."},
   buy_title:{ja:"いくらから買える?",en:"Minimum to buy"},
   buy_mini:{ja:"ミニ株(1株)",en:"Fractional (1 share)"},
   buy_lot:{ja:"単元(100株)",en:"Standard lot (100 sh.)"},
@@ -604,7 +620,7 @@ function applyLang(){
   document.documentElement.lang=LANG;
   document.querySelectorAll("[data-i18n]").forEach(el=>el.textContent=t(el.dataset.i18n));
   document.querySelectorAll("[data-i18n-html]").forEach(el=>el.innerHTML=t(el.dataset.i18nHtml));
-  if(DATA){setStamp();render();renderVS();renderQuiz();renderGauge();}
+  if(DATA){setStamp();render();renderVS();renderQuiz();renderGauge();checkStale();scopeNote();}
 }
 $("btn-lang").onclick=()=>{LANG=LANG==="ja"?"en":LANG==="en"?"zh":"ja";applyLang()};
 
@@ -647,6 +663,24 @@ function render(){
 }
 function renderTapeSafe(){}
 
+function checkStale(){
+  if(!DATA||DATA.demo)return;
+  const days=Math.floor((Date.now()-new Date(DATA.updated).getTime())/864e5);
+  const el=$("stale");
+  if(days>=4){
+    const zx=LANG==="zh"?ZH_EXTRA.stale_warn:null;
+    el.textContent=(zx||t("stale_warn")).replace("{d}",days);
+    el.style.display="block";
+  }else el.style.display="none";
+}
+function scopeNote(){
+  if(!DATA)return;
+  const n=DATA.universe||DATA.stocks.length;
+  const zx=LANG==="zh"?ZH_EXTRA.scope_note:null;
+  const m=document.querySelector(".method");
+  if(m&&!$("scope")){const s=document.createElement("div");s.id="scope";m.appendChild(s);}
+  if($("scope"))$("scope").textContent="※"+(zx||t("scope_note")).replace("{n}",n);
+}
 function setStamp(){
   if(!DATA)return;
   const d=new Date(DATA.updated);
