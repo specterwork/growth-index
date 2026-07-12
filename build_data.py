@@ -40,7 +40,7 @@ UNIVERSE = [
     # ("ASML.AS","ASML","EU","€"), ("SAP.DE","SAP","EU","€"),
 ]
 
-TOP_N = 36          # 上位何銘柄を出力するか（総合スコア順）
+TOP_N = 100  # 実質すべて掲載(市場別の足切りを防ぐ)          # 上位何銘柄を出力するか（総合スコア順）
 SPARK_POINTS = 24   # スパークラインの点数
 
 def pct_change(series, days_ago):
@@ -146,6 +146,13 @@ def main():
             print(f"skip {tkr}: {e}")
     if len(stocks) < 30:
         raise SystemExit(f"品質ゲート: 取得成功 {len(stocks)} 銘柄 (<30)。更新を中止し前回データを維持します。")
+    mk = {}
+    for s in stocks:
+        mk[s["m"]] = mk.get(s["m"], 0) + 1
+    print("market counts:", mk)   # 取得診断(Actionsログで確認可)
+    for m in ("JP", "US", "EU"):
+        if mk.get(m, 0) == 0:
+            print(f"WARNING: {m} 市場の取得が0件です。ティッカーまたはデータ源を確認してください。")
     stocks.sort(key=lambda s: s["_score"], reverse=True)
     for s in stocks:
         s.pop("_score")
@@ -160,7 +167,7 @@ def main():
         print("fx skip:", e)
 
     out = {
-        "universe": len(UNIVERSE), "fetched": len(stocks),
+        "universe": len(UNIVERSE), "fetched": len(stocks), "mk": mk,
         "stats": backtest_stats(df, UNIVERSE),
         "fx": fx, "fxe": fxe,
         "updated": datetime.datetime.now(
